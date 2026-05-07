@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ひらがな れんしゅう</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --c1: #E03030; --c2: #1A8A3A; --c3: #E07010; --c4: #1040C0; --c5: #8020A0;
+  --bg: #FFF8F0;
+  --text: #2C3450;
+}
+
+body {
+  font-family: 'Hiragino Maru Gothic Pro','BIZ UDPGothic','Rounded Mplus 1c',sans-serif;
+  background: var(--bg);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ===== HOME ===== */
+#home {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 32px;
+  min-height: 100vh;
+}
+
+.home-title {
+  font-size: clamp(22px,6vw,38px);
+  font-weight: bold;
+  color: var(--c1);
+  margin-bottom: 4px;
+  letter-spacing: .05em;
+}
+
+.home-sub {
+  font-size: clamp(12px,3vw,16px);
+  color: #999;
+  margin-bottom: 20px;
+}
+
+.char-grid {
+  display: grid;
+  grid-template-columns: repeat(5,1fr);
+  gap: 8px;
+  width: 100%;
+  max-width: 440px;
+}
+
+.char-btn {
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  transition: transform .13s, box-shadow .13s;
+  position: relative;
+  overflow: hidden;
+}
+
+.char-btn:active { transform: scale(.91); box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+
+.char-btn .kana {
+  font-size: clamp(20px,5vw,30px);
+  font-weight: bold;
+  color: var(--text);
+  line-height: 1;
+}
+
+.char-btn .roman {
+  font-size: clamp(8px,1.8vw,11px);
+  color: #bbb;
+  font-weight: normal;
+}
+
+.char-btn.done::after {
+  content: '★';
+  position: absolute;
+  top: 2px;
+  right: 5px;
+  font-size: 11px;
+  color: #f0b020;
+}
+
+/* ===== PRACTICE ===== */
+#practice {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 16px 28px;
+  min-height: 100vh;
+}
+
+.prac-header {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.back-btn {
+  width: 40px; height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 2px 6px rgba(0,0,0,.12);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.char-title { text-align: center; }
+.char-title .big { font-size: 34px; font-weight: bold; color: var(--text); line-height: 1; }
+.char-title .small { font-size: 13px; color: #aaa; }
+
+/* difficulty toggle */
+.diff-wrap {
+  display: flex;
+  background: #e8e8e8;
+  border-radius: 30px;
+  padding: 3px;
+  margin-bottom: 12px;
+}
+
+.diff-btn {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 27px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  background: transparent;
+  color: #888;
+  transition: background .2s, color .2s;
+}
+
+.diff-btn.active {
+  background: white;
+  color: var(--text);
+  box-shadow: 0 2px 6px rgba(0,0,0,.14);
+}
+
+/* practice area (the big drawing cell) */
+.prac-cell {
+  position: relative;
+  width: min(88vw, 380px);
+  aspect-ratio: 1;
+  background: white;
+  border-radius: 18px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.13);
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* Horizontal notebook lines */
+.nb-hlines {
+  position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 37px,
+    rgba(140,175,220,.18) 37px,
+    rgba(140,175,220,.18) 38px
+  );
+  pointer-events: none;
+}
+
+/* 4-division dotted cross */
+.nb-cross-h, .nb-cross-v {
+  position: absolute;
+  pointer-events: none;
+}
+
+.nb-cross-h {
+  top: 50%; left: 6%; right: 6%;
+  height: 0;
+  border-top: 1.5px dashed rgba(140,175,220,.45);
+  transform: translateY(-50%);
+}
+
+.nb-cross-v {
+  left: 50%; top: 6%; bottom: 6%;
+  width: 0;
+  border-left: 1.5px dashed rgba(140,175,220,.45);
+  transform: translateX(-50%);
+}
+
+/* outer border of cell */
+.nb-border {
+  position: absolute; inset: 0;
+  border: 1.5px solid rgba(140,175,220,.3);
+  border-radius: 18px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* SVG guide layer */
+.guide-svg {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+
+/* drawing canvas */
+.draw-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  cursor: crosshair;
+  z-index: 3;
+}
+
+/* ===== STROKE PROGRESS ===== */
+.stroke-label {
+  margin-top: 12px;
+  font-size: 15px;
+  color: #666;
+  text-align: center;
+}
+
+.stroke-dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 7px;
+}
+
+.dot {
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: #ddd;
+  transition: background .25s, transform .2s;
+}
+
+.dot.done { background: #4CAF50; }
+.dot.cur { background: var(--c1); transform: scale(1.25); }
+
+/* ===== BUTTONS ===== */
+.btn-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 13px;
+  width: min(88vw, 380px);
+}
+
+.btn {
+  flex: 1;
+  padding: 13px 10px;
+  border: none;
+  border-radius: 50px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform .13s, opacity .13s;
+}
+
+.btn:active { transform: scale(.95); }
+.btn:disabled { opacity: .38; pointer-events: none; }
+
+.btn-clear { background: #f0f0f0; color: #555; }
+.btn-next  { background: var(--c1); color: white; box-shadow: 0 3px 10px rgba(224,48,48,.35); }
+.btn-hide  { background: #eef0f8; color: #446; border: 1.5px solid #c0c8e0; font-size: 13px; }
+
+/* hide button only shown in hard mode */
+.hard-only { display: none; }
+
+/* ===== NAV ===== */
+.nav-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 11px;
+}
+
+.nav-btn {
+  width: 44px; height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,.11);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.nav-label { font-size: 14px; color: #aaa; min-width: 55px; text-align: center; }
+
+/* ===== COMPLETION OVERLAY ===== */
+.comp-overlay {
+  display: none;
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,.93);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 18px;
+  z-index: 10;
+}
+
+.comp-overlay.show { display: flex; }
+.comp-star { font-size: 60px; animation: bob .5s infinite alternate; }
+.comp-text { font-size: 22px; font-weight: bold; color: var(--c1); }
+.comp-text2 { font-size: 14px; color: #888; }
+
+.comp-btns { display: flex; gap: 10px; margin-top: 6px; }
+.comp-btn {
+  padding: 11px 22px;
+  border: none;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.comp-btn.next { background: var(--c1); color: white; }
+.comp-btn.home { background: #eee; color: #444; }
+
+@keyframes bob { from { transform: scale(1); } to { transform: scale(1.12); } }
+</style>
+</head>
+<body>
+
+<!-- ====== HOME ====== -->
+<div id="home">
+  <div class="home-title">ひらがな れんしゅう ✏️</div>
+  <div class="home-sub">もじをえらんでれんしゅうしよう！</div>
+  <div class="char-grid" id="char-grid"></div>
+</div>
+
+<!-- ====== PRACTICE ====== -->
+<div id="practice">
+  <div class="prac-header">
+    <button class="back-btn" onclick="goHome()">←</button>
+    <div class="char-title">
+      <div class="big" id="char-disp"></div>
+      <div class="small" id="read-disp"></div>
+    </div>
+    <div style="width:40px"></div>
+  </div>
+
+  <!-- difficulty -->
+  <div class="diff-wrap">
+    <button class="diff-btn active" id="d-easy" onclick="setDiff('easy')">かんたん</button>
+    <button class="diff-btn"        id="d-hard" onclick="setDiff('hard')">むずかしい</button>
+  </div>
+
+  <!-- drawing cell -->
+  <div class="prac-cell" id="prac-cell">
+    <div class="nb-hlines"></div>
+    <div class="nb-cross-h"></div>
+    <div class="nb-cross-v"></div>
+    <div class="nb-border"></div>
+    <svg class="guide-svg" id="guide-svg" viewBox="0 0 200 200"></svg>
+    <canvas class="draw-canvas" id="draw-canvas"></canvas>
+    <div class="comp-overlay" id="comp-overlay">
+      <div class="comp-star">⭐</div>
+      <div class="comp-text">じょうずに かけたよ！</div>
+      <div class="comp-text2" id="comp-char-big"></div>
+      <div class="comp-btns">
+        <button class="comp-btn next" onclick="goNext()">つぎのもじ →</button>
+        <button class="comp-btn home" onclick="goHome()">もどる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- stroke info -->
+  <div class="stroke-label" id="stroke-label"></div>
+  <div class="stroke-dots" id="stroke-dots"></div>
+
+  <!-- buttons -->
+  <div class="btn-row">
+    <button class="btn btn-clear" onclick="resetChar()">けす</button>
+    <button class="btn btn-hide hard-only" id="btn-hide" onclick="toggleGuide()">ガイドをかくす</button>
+    <button class="btn btn-next" id="btn-next" onclick="advanceStroke()">つぎへ →</button>
+  </div>
+
+  <!-- navigation -->
+  <div class="nav-row">
+    <button class="nav-btn" onclick="navChar(-1)">‹</button>
+    <div class="nav-label" id="nav-label"></div>
+    <button class="nav-btn" onclick="navChar(1)">›</button>
+  </div>
+</div>
+
+<script>
+// =====================================================
+// HIRAGANA STROKE DATA  (SVG viewBox 0 0 200 200)
+// Character occupies approx x:38-162, y:22-150
+// d  = SVG path string
+// nx,ny = stroke-number circle position
+// =====================================================
+
+const SC = ['#E03030','#1A8A3A','#E07010','#1040C0','#8020A0'];
+
+const KANA = [
+  // ── あ行 ──
+  { char:'あ', r:'a', s:[
+    { d:'M 46,67 C 72,61 108,61 150,67',                                                              nx:37,ny:57 },
+    { d:'M 98,26 C 99,54 101,92 97,120 Q 92,140 83,150',                                              nx:89,ny:17 },
+    { d:'M 48,103 C 31,90 28,114 42,133 C 56,152 95,154 126,142 C 157,130 160,106 150,91 C 140,76 123,75 110,83 C 96,91 90,108 98,124', nx:38,ny:93 },
+  ]},
+  { char:'い', r:'i', s:[
+    { d:'M 60,44 Q 58,84 55,122 Q 51,145 56,162',                                                     nx:47,ny:36 },
+    { d:'M 118,38 Q 120,78 122,116 Q 122,140 112,155 Q 122,168 136,157',                              nx:108,ny:30 },
+  ]},
+  { char:'う', r:'u', s:[
+    { d:'M 80,30 C 90,24 108,24 117,30',                                                              nx:72,ny:21 },
+    { d:'M 99,47 C 122,58 137,88 128,118 Q 116,146 92,156 Q 70,166 57,150 Q 50,137 55,124',          nx:91,ny:39 },
+  ]},
+  { char:'え', r:'e', s:[
+    { d:'M 36,63 C 68,56 106,56 152,63',                                                              nx:40,ny:60 },
+    { d:'M 94,63 C 96,88 88,116 74,136 Q 62,152 88,166 Q 116,178 150,156 Q 168,134 142,110 Q 118,88 94,102', nx:86,ny:55 },
+  ]},
+  { char:'お', r:'o', s:[
+    { d:'M 38,60 C 68,53 106,53 148,60',                                                              nx:30,ny:52 },
+    { d:'M 95,34 C 96,62 95,98 90,126 Q 84,148 78,164',                                               nx:87,ny:26 },
+    { d:'M 62,90 C 42,75 38,100 54,122 Q 70,144 114,137 Q 149,126 145,96 Q 138,67 112,79 Q 86,91 86,114', nx:53,ny:82 },
+  ]},
+  // ── か行 ──
+  { char:'か', r:'ka', s:[
+    { d:'M 70,72 C 92,65 120,65 148,72',                                                              nx:68,ny:69 },
+    { d:'M 55,38 Q 53,78 49,116 Q 44,146 46,164',                                                     nx:40,ny:30 },
+    { d:'M 120,72 Q 128,102 118,130 Q 108,154 118,168',                                               nx:112,ny:64 },
+  ]},
+  { char:'き', r:'ki', s:[
+    { d:'M 38,52 C 70,45 108,45 152,52',                                                              nx:30,ny:44 },
+    { d:'M 38,84 C 70,77 108,77 148,84',                                                              nx:30,ny:76 },
+    { d:'M 56,52 Q 53,96 48,133 Q 44,158 46,170',                                                     nx:42,ny:40 },
+    { d:'M 114,84 Q 120,114 111,138 Q 102,158 112,170',                                               nx:120,ny:80 },
+  ]},
+  { char:'く', r:'ku', s:[
+    { d:'M 148,42 C 128,68 100,94 72,118 C 52,134 58,154 82,162',                                     nx:142,ny:34 },
+  ]},
+  { char:'け', r:'ke', s:[
+    { d:'M 55,36 Q 53,78 50,116 Q 46,146 48,166',                                                     nx:40,ny:28 },
+    { d:'M 55,80 C 80,73 112,73 150,80',                                                              nx:47,ny:72 },
+    { d:'M 122,36 Q 131,80 122,118 Q 110,148 86,162 Q 72,168 61,158',                                 nx:114,ny:28 },
+  ]},
+  { char:'こ', r:'ko', s:[
+    { d:'M 38,62 C 76,55 114,55 154,62',                                                              nx:30,ny:54 },
+    { d:'M 38,118 C 76,111 114,111 154,118 Q 157,137 151,154',                                        nx:30,ny:110 },
+  ]},
+  // ── さ行 ──
+  { char:'さ', r:'sa', s:[
+    { d:'M 38,56 C 72,49 110,49 152,56',                                                              nx:30,ny:48 },
+    { d:'M 38,90 C 68,83 102,83 124,90',                                                              nx:30,ny:82 },
+    { d:'M 56,90 Q 56,126 66,150 Q 82,166 112,158 Q 138,148 129,124',                                 nx:48,ny:82 },
+  ]},
+  { char:'し', r:'shi', s:[
+    { d:'M 90,38 Q 92,88 93,126 Q 93,148 84,163 Q 71,173 58,161',                                     nx:82,ny:30 },
+  ]},
+  { char:'す', r:'su', s:[
+    { d:'M 38,60 C 72,53 110,53 152,60',                                                              nx:30,ny:52 },
+    { d:'M 94,60 Q 96,98 104,126 Q 112,148 101,162 Q 88,174 72,163 Q 60,150 65,138 Q 73,124 88,122', nx:86,ny:52 },
+  ]},
+  { char:'せ', r:'se', s:[
+    { d:'M 44,66 C 70,59 108,59 148,66',                                                              nx:44,ny:62 },
+    { d:'M 94,36 Q 93,76 91,113 Q 88,145 85,165',                                                     nx:91,ny:26 },
+    { d:'M 44,106 C 70,99 108,99 148,106 Q 157,126 150,147 Q 141,164 120,168',                        nx:36,ny:98 },
+  ]},
+  { char:'そ', r:'so', s:[
+    { d:'M 42,57 C 78,50 120,50 154,57 Q 156,74 140,84 Q 120,92 94,87 Q 70,80 63,94 Q 53,108 70,126 Q 88,144 118,138 Q 147,132 148,113', nx:34,ny:49 },
+  ]},
+  // ── た行 ──
+  { char:'た', r:'ta', s:[
+    { d:'M 38,60 C 72,53 112,53 152,60',                                                              nx:30,ny:52 },
+    { d:'M 62,36 Q 60,78 55,116 Q 50,148 53,166',                                                     nx:46,ny:28 },
+    { d:'M 108,36 Q 116,60 107,76',                                                                   nx:102,ny:28 },
+    { d:'M 76,98 C 56,85 52,108 68,126 C 84,144 122,142 144,122 Q 158,104 146,87 Q 132,70 110,76 Q 88,82 87,100', nx:67,ny:90 },
+  ]},
+  { char:'ち', r:'chi', s:[
+    { d:'M 38,60 C 72,53 112,53 152,62 Q 159,80 152,100 Q 140,118 114,118',                           nx:30,ny:52 },
+    { d:'M 74,108 C 53,93 47,118 62,140 C 78,162 116,162 143,140 Q 162,118 151,96 Q 138,76 114,82 Q 88,88 82,110', nx:65,ny:100 },
+  ]},
+  { char:'つ', r:'tsu', s:[
+    { d:'M 152,52 C 130,44 94,50 70,67 C 46,84 42,112 56,136 C 70,160 108,164 138,150 Q 160,134 158,106', nx:155,ny:40 },
+  ]},
+  { char:'て', r:'te', s:[
+    { d:'M 38,66 C 72,59 114,59 152,66 Q 162,84 152,108 C 149,136 127,157 92,164 Q 72,170 60,160',   nx:30,ny:58 },
+  ]},
+  { char:'と', r:'to', s:[
+    { d:'M 84,36 Q 86,78 89,113 Q 89,134 80,148',                                                     nx:68,ny:28 },
+    { d:'M 60,106 C 40,92 37,114 53,136 C 70,158 108,160 138,143 Q 158,124 149,103',                  nx:51,ny:98 },
+  ]},
+  // ── な行 ──
+  { char:'な', r:'na', s:[
+    { d:'M 38,60 C 72,53 112,53 152,60',                                                              nx:30,ny:52 },
+    { d:'M 64,36 Q 62,78 57,116 Q 52,148 54,166',                                                     nx:48,ny:28 },
+    { d:'M 115,36 Q 118,60 115,80',                                                                   nx:109,ny:28 },
+    { d:'M 74,92 C 52,78 48,102 64,122 C 80,142 120,142 146,122 Q 164,103 152,85 Q 139,67 116,74 Q 92,82 91,102', nx:65,ny:84 },
+  ]},
+  { char:'に', r:'ni', s:[
+    { d:'M 38,63 C 62,56 90,56 116,63',                                                               nx:30,ny:55 },
+    { d:'M 62,63 Q 60,100 56,136 Q 52,158 55,168',                                                    nx:46,ny:55 },
+    { d:'M 100,63 Q 102,95 100,126 Q 98,148 115,158 Q 153,142 155,120 Q 154,94 150,72',               nx:92,ny:55 },
+  ]},
+  { char:'ぬ', r:'nu', s:[
+    { d:'M 52,36 Q 53,78 55,116 Q 57,140 48,158',                                                     nx:36,ny:28 },
+    { d:'M 86,36 Q 89,64 92,93 C 95,118 103,136 122,142 Q 140,148 150,134 Q 162,118 155,97 Q 143,74 120,72 Q 96,70 93,82 Q 86,100 94,118', nx:78,ny:28 },
+  ]},
+  { char:'ね', r:'ne', s:[
+    { d:'M 52,36 Q 52,78 49,116 Q 46,146 49,165',                                                     nx:48,ny:26 },
+    { d:'M 84,36 Q 86,66 89,94 C 92,118 105,138 126,146 Q 147,152 157,131 Q 166,108 152,88 Q 138,68 115,72 Q 92,76 90,96 Q 88,120 99,141 Q 115,163 134,157', nx:76,ny:28 },
+  ]},
+  { char:'の', r:'no', s:[
+    { d:'M 96,36 C 117,40 138,60 143,88 C 148,116 135,142 110,155 C 84,168 56,158 46,136 C 36,115 49,88 72,77 C 95,66 122,74 132,93 Q 138,118 124,138', nx:88,ny:28 },
+  ]},
+  // ── は行 ──
+  { char:'は', r:'ha', s:[
+    { d:'M 52,36 Q 50,78 46,116 Q 42,148 44,168',                                                     nx:36,ny:28 },
+    { d:'M 100,36 Q 98,78 94,120 Q 91,148 87,168',                                                    nx:84,ny:28 },
+    { d:'M 70,80 C 50,67 44,92 59,112 C 75,132 114,132 140,112 Q 160,90 149,68 Q 135,46 111,52 Q 88,58 87,79', nx:61,ny:72 },
+  ]},
+  { char:'ひ', r:'hi', s:[
+    { d:'M 44,74 C 41,98 48,126 70,146 C 92,166 126,166 146,142 C 166,118 162,88 138,72 C 114,56 82,68 80,92 C 78,118 97,138 120,134', nx:36,ny:66 },
+  ]},
+  { char:'ふ', r:'fu', s:[
+    { d:'M 74,34 Q 80,46 77,57',                                                                      nx:58,ny:26 },
+    { d:'M 54,92 C 38,106 36,128 54,146 Q 72,162 94,155',                                             nx:38,ny:84 },
+    { d:'M 118,74 C 140,68 156,85 154,108',                                                           nx:112,ny:66 },
+    { d:'M 111,108 C 126,122 140,144 130,162 Q 120,174 104,168',                                      nx:95,ny:100 },
+  ]},
+  { char:'へ', r:'he', s:[
+    { d:'M 36,97 C 66,72 103,67 137,79 C 166,89 172,118 150,140',                                     nx:28,ny:89 },
+  ]},
+  { char:'ほ', r:'ho', s:[
+    { d:'M 52,36 Q 50,78 46,116 Q 42,148 44,168',                                                     nx:36,ny:28 },
+    { d:'M 52,70 C 80,63 115,63 152,70',                                                              nx:44,ny:62 },
+    { d:'M 116,36 Q 113,78 111,120',                                                                  nx:100,ny:28 },
+    { d:'M 70,103 C 50,90 46,116 62,136 C 78,156 118,156 147,132 Q 165,110 153,90 Q 140,70 116,76',  nx:61,ny:95 },
+  ]},
+  // ── ま行 ──
+  { char:'ま', r:'ma', s:[
+    { d:'M 38,57 C 72,50 114,50 152,57',                                                              nx:30,ny:49 },
+    { d:'M 38,88 C 72,81 114,81 152,88',                                                              nx:30,ny:80 },
+    { d:'M 95,88 Q 97,116 100,138 C 103,162 120,175 134,162 Q 154,144 144,120 Q 128,98 105,107 Q 82,116 80,140 Q 78,162 93,175', nx:87,ny:80 },
+  ]},
+  { char:'み', r:'mi', s:[
+    { d:'M 55,36 Q 57,70 55,103 Q 52,130 55,153 Q 62,167 73,162',                                     nx:39,ny:28 },
+    { d:'M 95,49 Q 99,78 103,107 C 110,134 128,150 145,140 Q 161,128 154,104 Q 142,80 118,78 Q 96,76 93,95 Q 91,116 100,134', nx:87,ny:41 },
+  ]},
+  { char:'む', r:'mu', s:[
+    { d:'M 38,70 C 72,63 110,63 148,70',                                                              nx:30,ny:62 },
+    { d:'M 95,70 Q 93,84 91,96',                                                                      nx:86,ny:58 },
+    { d:'M 51,96 C 37,82 35,109 53,130 C 71,151 115,153 143,130 Q 161,110 149,86 Q 135,62 108,68',  nx:42,ny:88 },
+  ]},
+  { char:'め', r:'me', s:[
+    { d:'M 52,41 Q 54,76 52,111 Q 49,139 52,162',                                                     nx:36,ny:33 },
+    { d:'M 92,57 Q 95,87 98,114 C 103,140 120,158 140,148 Q 160,135 152,111 Q 139,87 115,82 Q 93,76 91,96 Q 89,119 98,138', nx:84,ny:49 },
+  ]},
+  { char:'も', r:'mo', s:[
+    { d:'M 95,36 Q 94,78 91,116 Q 88,148 85,168',                                                     nx:79,ny:28 },
+    { d:'M 38,65 C 72,58 110,58 152,65',                                                              nx:30,ny:57 },
+    { d:'M 38,103 C 72,96 110,96 152,103',                                                            nx:30,ny:95 },
+  ]},
+  // ── や行 ──
+  { char:'や', r:'ya', s:[
+    { d:'M 55,87 C 82,80 116,80 152,87',                                                              nx:50,ny:82 },
+    { d:'M 48,58 C 46,86 49,116 59,138 Q 69,157 61,168',                                              nx:46,ny:46 },
+    { d:'M 126,54 Q 129,88 132,124 Q 132,149 125,167',                                                nx:118,ny:46 },
+  ]},
+  { char:'ゆ', r:'yu', s:[
+    { d:'M 44,58 C 41,86 45,118 56,140 Q 66,158 59,168',                                              nx:28,ny:50 },
+    { d:'M 88,43 C 114,50 140,72 147,100 C 155,128 142,152 118,160 Q 98,168 83,158 Q 69,145 72,125 Q 78,105 97,100 Q 120,94 129,108', nx:80,ny:35 },
+  ]},
+  { char:'よ', r:'yo', s:[
+    { d:'M 38,73 C 72,66 115,66 152,73',                                                              nx:42,ny:69 },
+    { d:'M 115,36 Q 118,80 119,118 Q 118,142 109,158 Q 97,170 81,161',                                nx:99,ny:28 },
+  ]},
+  // ── ら行 ──
+  { char:'ら', r:'ra', s:[
+    { d:'M 38,63 C 72,56 110,56 152,63 Q 161,80 153,100 Q 140,116 114,116',                           nx:40,ny:59 },
+    { d:'M 71,108 C 51,94 47,118 62,140 C 78,162 118,162 146,140 Q 164,118 152,96 Q 138,74 114,80 Q 88,86 87,108', nx:62,ny:100 },
+  ]},
+  { char:'り', r:'ri', s:[
+    { d:'M 60,40 Q 59,80 56,116 Q 52,148 55,164',                                                     nx:44,ny:32 },
+    { d:'M 118,37 Q 121,70 123,109 Q 121,142 107,162 Q 92,175 79,164',                                nx:110,ny:29 },
+  ]},
+  { char:'る', r:'ru', s:[
+    { d:'M 44,63 C 72,53 114,53 152,63 Q 166,80 158,103 Q 146,126 122,128 Q 98,130 88,118 Q 74,104 80,88 Q 87,71 108,71 Q 133,71 143,90 Q 152,112 139,133 Q 121,153 98,155 Q 75,157 62,145', nx:36,ny:55 },
+  ]},
+  { char:'れ', r:'re', s:[
+    { d:'M 55,36 Q 54,78 51,116 Q 48,148 51,167',                                                     nx:48,ny:26 },
+    { d:'M 92,36 Q 95,68 98,98 C 102,126 118,148 138,140 Q 159,128 152,104 Q 140,78 116,76 Q 93,74 91,96 Q 89,120 99,142 Q 114,162 134,157', nx:84,ny:28 },
+  ]},
+  { char:'ろ', r:'ro', s:[
+    { d:'M 38,63 C 74,56 112,56 154,63 Q 166,80 158,107 Q 145,131 118,134 Q 90,137 74,117 Q 60,97 70,79', nx:30,ny:55 },
+  ]},
+  // ── わ行・ん ──
+  { char:'わ', r:'wa', s:[
+    { d:'M 64,36 Q 61,78 57,116 Q 53,148 57,165',                                                     nx:57,ny:26 },
+    { d:'M 106,36 Q 109,66 113,98 C 117,126 130,148 146,142 Q 162,130 158,106 Q 150,80 126,69 Q 104,57 98,77 Q 92,99 106,120 Q 120,140 138,134', nx:98,ny:28 },
+  ]},
+  { char:'を', r:'wo', s:[
+    { d:'M 38,56 C 72,49 110,49 152,56',                                                              nx:30,ny:48 },
+    { d:'M 38,80 C 72,73 110,73 152,80',                                                              nx:30,ny:72 },
+    { d:'M 95,36 Q 96,80 95,118 Q 93,145 82,162 Q 64,174 52,161',                                     nx:79,ny:28 },
+  ]},
+  { char:'ん', r:'n', s:[
+    { d:'M 55,58 C 72,46 110,46 143,60 Q 160,76 156,103 C 152,131 129,152 105,155 C 79,158 61,141 63,118 C 66,94 88,80 113,82', nx:47,ny:50 },
+  ]},
+];
+
+// =====================================================
+// STATE
+// =====================================================
+let ci = 0;           // current char index
+let cs = 0;           // current stroke index
+let diff = 'easy';    // 'easy' | 'hard'
+let done = new Set(JSON.parse(localStorage.getItem('done')||'[]'));
+let completed = [];   // strokes done this session
+let guideVisible = false;
+let isDrawing = false;
+let lx = 0, ly = 0;
+let ctx;
+let autoTimer = null;
+
+// =====================================================
+// HOME
+// =====================================================
+function buildGrid() {
+  const g = document.getElementById('char-grid');
+  g.innerHTML = '';
+  KANA.forEach((k,i) => {
+    const b = document.createElement('button');
+    b.className = 'char-btn' + (done.has(k.char) ? ' done' : '');
+    b.innerHTML = `<span class="kana">${k.char}</span><span class="roman">${k.r}</span>`;
+    b.onclick = () => openPractice(i);
+    g.appendChild(b);
+  });
+}
+
+function goHome() {
+  document.getElementById('home').style.display = 'flex';
+  document.getElementById('practice').style.display = 'none';
+  buildGrid();
+}
+
+// =====================================================
+// PRACTICE
+// =====================================================
+function openPractice(i) {
+  ci = i; cs = 0; completed = []; guideVisible = false;
+  document.getElementById('home').style.display = 'none';
+  document.getElementById('practice').style.display = 'flex';
+  document.getElementById('comp-overlay').classList.remove('show');
+  initCanvas();
+  renderAll();
+}
+
+function renderAll() {
+  const k = KANA[ci];
+  document.getElementById('char-disp').textContent = k.char;
+  document.getElementById('read-disp').textContent = '「' + k.r + '」';
+  document.getElementById('nav-label').textContent = (ci+1) + ' / ' + KANA.length;
+  renderDots();
+  renderGuide();
+  renderLabel();
+  updateHideBtn();
+  clearCanvas();
+}
+
+function renderLabel() {
+  const k = KANA[ci];
+  const lbl = document.getElementById('stroke-label');
+  if (cs >= k.s.length) {
+    lbl.textContent = 'ぜんぶ かけたよ！';
+  } else if (diff === 'hard') {
+    lbl.textContent = 'じゆうに かいてね';
+  } else {
+    lbl.textContent = (cs+1) + 'かくめ を なぞってね';
+  }
+}
+
+function defaultNextLabel() {
+  return diff === 'hard' ? 'かけた！' : 'つぎへ →';
+}
+
+function renderDots() {
+  const k = KANA[ci];
+  const wrap = document.getElementById('stroke-dots');
+  wrap.innerHTML = '';
+  k.s.forEach((_,i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i < cs ? ' done' : i === cs ? ' cur' : '');
+    wrap.appendChild(d);
+  });
+}
+
+function renderGuide() {
+  const svg = document.getElementById('guide-svg');
+  svg.innerHTML = '';
+  const k = KANA[ci];
+  const NS = 'http://www.w3.org/2000/svg';
+
+  if (diff === 'easy') {
+    // かんたん: 文字を薄く背景表示 ＋ 画数の番号を表示
+    const charBg = document.createElementNS(NS, 'text');
+    charBg.setAttribute('x', '100');
+    charBg.setAttribute('y', '152');
+    charBg.setAttribute('font-size', '155');
+    charBg.setAttribute('font-family', '"Hiragino Maru Gothic Pro","BIZ UDPGothic","Yu Gothic","Meiryo",sans-serif');
+    charBg.setAttribute('text-anchor', 'middle');
+    charBg.setAttribute('pointer-events', 'none');
+    charBg.setAttribute('fill', '#3050B0');
+    charBg.setAttribute('opacity', '0.12');
+    charBg.textContent = k.char;
+    svg.appendChild(charBg);
+
+    // ①だけ表示（書き始めの位置を示す）
+    if (cs === 0) {
+      addNum(svg, 1, k.s[0].nx, k.s[0].ny, SC[0]);
+    }
+  } else {
+    // むずかしい: 「ガイドをみる」を押した時だけ文字を表示
+    if (guideVisible) {
+      const charBg = document.createElementNS(NS, 'text');
+      charBg.setAttribute('x', '100');
+      charBg.setAttribute('y', '152');
+      charBg.setAttribute('font-size', '155');
+      charBg.setAttribute('font-family', '"Hiragino Maru Gothic Pro","BIZ UDPGothic","Yu Gothic","Meiryo",sans-serif');
+      charBg.setAttribute('text-anchor', 'middle');
+      charBg.setAttribute('pointer-events', 'none');
+      charBg.setAttribute('fill', '#445566');
+      charBg.setAttribute('opacity', '0.30');
+      charBg.textContent = k.char;
+      svg.appendChild(charBg);
+    }
+  }
+}
+
+function addPath(svg, d, color, w, op) {
+  const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+  p.setAttribute('d', d);
+  p.setAttribute('stroke', color);
+  p.setAttribute('stroke-width', w);
+  p.setAttribute('fill', 'none');
+  p.setAttribute('stroke-linecap', 'round');
+  p.setAttribute('stroke-linejoin', 'round');
+  p.setAttribute('opacity', op);
+  svg.appendChild(p);
+}
+
+function addNum(svg, n, x, y, color) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+  const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', 10);
+  c.setAttribute('fill', 'white'); c.setAttribute('stroke', color); c.setAttribute('stroke-width', 1.5);
+  g.appendChild(c);
+  const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+  t.setAttribute('x', x); t.setAttribute('y', y+4.5);
+  t.setAttribute('text-anchor','middle');
+  t.setAttribute('font-size','10'); t.setAttribute('font-weight','bold');
+  t.setAttribute('fill', color); t.setAttribute('font-family','sans-serif');
+  t.textContent = n;
+  g.appendChild(t);
+  svg.appendChild(g);
+}
+
+// =====================================================
+// CANVAS
+// =====================================================
+function initCanvas() {
+  const canvas = document.getElementById('draw-canvas');
+  ctx = canvas.getContext('2d');
+  function resize() {
+    const r = canvas.parentElement.getBoundingClientRect();
+    canvas.width  = r.width;
+    canvas.height = r.height;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+  }
+  resize();
+  new ResizeObserver(resize).observe(canvas.parentElement);
+
+  canvas.addEventListener('pointerdown', onDown);
+  canvas.addEventListener('pointermove', onMove);
+  canvas.addEventListener('pointerup',   onUp);
+  canvas.addEventListener('pointercancel', onUp);
+}
+
+function strokeColor() {
+  if (diff === 'hard') return '#334466';
+  return SC[cs % SC.length];
+}
+
+function onDown(e) {
+  e.preventDefault();
+  if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+  isDrawing = true;
+  const pos = pt(e);
+  lx = pos.x; ly = pos.y;
+  const canvas = document.getElementById('draw-canvas');
+  ctx.beginPath();
+  ctx.moveTo(lx, ly);
+  ctx.strokeStyle = strokeColor();
+  ctx.lineWidth   = Math.max(canvas.width / 15, 14);
+  ctx.globalAlpha = 0.82;
+}
+
+function onMove(e) {
+  if (!isDrawing) return;
+  e.preventDefault();
+  const pos = pt(e);
+  ctx.lineTo(pos.x, pos.y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y);
+  lx = pos.x; ly = pos.y;
+}
+
+function onUp(e) {
+  if (!isDrawing) return;
+  isDrawing = false;
+  ctx.closePath();
+  // かんたんモード: 指を離したら1.2秒後に自動で次の画へ
+  if (diff === 'easy' && cs < KANA[ci].s.length) {
+    autoTimer = setTimeout(advanceStroke, 500);
+  }
+}
+
+function pt(e) {
+  const r = document.getElementById('draw-canvas').getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+
+function clearCanvas() {
+  const canvas = document.getElementById('draw-canvas');
+  if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// =====================================================
+// STROKE ADVANCE
+// =====================================================
+function advanceStroke() {
+  if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+  const k = KANA[ci];
+  if (cs >= k.s.length) { resetChar(); return; }
+  if (diff === 'hard') {
+    completed = k.s.map((_, i) => i);
+    cs = k.s.length;
+  } else {
+    completed.push(cs);
+    cs++;
+  }
+  guideVisible = false;
+  updateHideBtn();
+  if (diff !== 'easy') clearCanvas();
+  renderDots();
+  renderGuide();
+  renderLabel();
+
+  if (cs >= k.s.length) {
+    setTimeout(() => {
+      document.getElementById('comp-char-big').textContent = k.char + '（' + k.r + '）';
+      document.getElementById('comp-overlay').classList.add('show');
+      done.add(k.char);
+      localStorage.setItem('done', JSON.stringify([...done]));
+    }, 350);
+    document.getElementById('btn-next').textContent = 'もういちど';
+  } else {
+    document.getElementById('btn-next').textContent = defaultNextLabel();
+  }
+}
+
+function resetChar() {
+  if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+  cs = 0; completed = []; guideVisible = false;
+  document.getElementById('comp-overlay').classList.remove('show');
+  document.getElementById('btn-next').textContent = defaultNextLabel();
+  clearCanvas();
+  renderAll();
+}
+
+function goNext() {
+  navChar(1);
+}
+
+function navChar(dir) {
+  ci = (ci + dir + KANA.length) % KANA.length;
+  cs = 0; completed = []; guideVisible = false;
+  document.getElementById('comp-overlay').classList.remove('show');
+  document.getElementById('btn-next').textContent = defaultNextLabel();
+  renderAll();
+}
+
+// =====================================================
+// DIFFICULTY
+// =====================================================
+function setDiff(d) {
+  diff = d;
+  document.getElementById('d-easy').classList.toggle('active', d==='easy');
+  document.getElementById('d-hard').classList.toggle('active', d==='hard');
+  document.querySelectorAll('.hard-only').forEach(el => {
+    el.style.display = d === 'hard' ? 'block' : 'none';
+  });
+  guideVisible = false;
+  updateHideBtn();
+  renderGuide();
+  renderLabel();
+  document.getElementById('btn-next').textContent = defaultNextLabel();
+}
+
+// =====================================================
+// GUIDE TOGGLE (hard mode)
+// =====================================================
+function toggleGuide() {
+  guideVisible = !guideVisible;
+  updateHideBtn();
+  renderGuide();
+}
+
+function updateHideBtn() {
+  const btn = document.getElementById('btn-hide');
+  btn.textContent = guideVisible ? 'ガイドをかくす' : 'ガイドをみる';
+}
+
+// =====================================================
+// INIT
+// =====================================================
+buildGrid();
+</script>
+</body>
+</html>
