@@ -826,7 +826,7 @@ function onUp(e) {
   ctx.closePath();
   // かんたんモード: 指を離したら1.2秒後に自動で次の画へ
   if (diff === 'easy' && cs < KANA[ci].s.length) {
-    autoTimer = setTimeout(advanceStroke, 500);
+    autoTimer = setTimeout(advanceStroke, 250);
   }
 }
 
